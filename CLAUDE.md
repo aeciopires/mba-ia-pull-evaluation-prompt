@@ -76,6 +76,7 @@ precision = evaluate_precision(question, answer, reference)
 
 ```
 src/
+├── validate.py        # Implementado: validação completa do ambiente (7 categorias)
 ├── pull_prompts.py    # Implementado: pull do Hub, salva YAML local
 ├── push_prompts.py    # Implementado: push do YAML para o Hub (público)
 ├── evaluate.py        # PRONTO — não alterar
@@ -125,6 +126,10 @@ A validação de estrutura é feita por `utils.validate_prompt_structure()`, que
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
+# Validação do ambiente (sempre rodar antes do pipeline)
+python src/validate.py          # Completa (com teste de conectividade)
+python src/validate.py --no-api # Sem chamadas de rede (mais rápida)
+
 # Pipeline completo
 python src/pull_prompts.py    # Fase 1: baixar prompt v1
 python src/push_prompts.py    # Fase 3: publicar prompt v2
@@ -133,6 +138,22 @@ python src/evaluate.py        # Fase 5: avaliar métricas
 # Testes
 pytest tests/test_prompts.py -v
 ```
+
+## validate.py — O que verifica
+
+O script `src/validate.py` cobre 7 categorias em sequência:
+
+| # | Categoria | Detalhes |
+|---|---|---|
+| 1 | Python | Versão >= 3.9 |
+| 2 | Pacotes | Todos os itens de `requirements.txt` importáveis |
+| 3 | Variáveis `.env` | Campos obrigatórios preenchidos, provider correto, chave de API presente |
+| 4 | Arquivos | Prompts, dataset, scripts `src/`, testes existem |
+| 5 | Prompt v2 YAML | Campos obrigatórios, `{bug_report}`, techniques, exemplos few-shot |
+| 6 | Dataset JSONL | 15 exemplos com `inputs.bug_report` e `outputs.reference` |
+| 7 | LangSmith | Conexão API + prompt no Hub (pulável via `--no-api`) |
+
+Retorna exit code `0` se tudo OK, `1` se há erros.
 
 ## O que NÃO alterar
 

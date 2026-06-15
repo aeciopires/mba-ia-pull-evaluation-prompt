@@ -10,11 +10,16 @@ Pipeline de otimização de prompts com LangChain e LangSmith para converter rel
 
 1. **Nunca altere** `src/evaluate.py`, `src/metrics.py`, `src/utils.py` ou `datasets/bug_to_user_story.jsonl`
 2. **O único arquivo de prompt que importa** para avaliação é `prompts/bug_to_user_story_v2.yml`
-3. **Após qualquer edição no YAML**, é obrigatório fazer push antes de avaliar:
+3. **Antes de qualquer execução**, valide o ambiente:
+   ```bash
+   python src/validate.py --no-api   # rápido, sem rede
+   python src/validate.py            # completo, testa LangSmith
+   ```
+4. **Após qualquer edição no YAML**, é obrigatório fazer push antes de avaliar:
    ```bash
    python src/push_prompts.py && python src/evaluate.py
    ```
-4. **O critério de sucesso** é: TODAS as 5 métricas >= 0.8 (helpfulness, correctness, f1_score, clarity, precision)
+5. **O critério de sucesso** é: TODAS as 5 métricas >= 0.8 (helpfulness, correctness, f1_score, clarity, precision)
 
 ## Estrutura do Prompt v2
 

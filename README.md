@@ -7,13 +7,23 @@
   - [Objetivo](#objetivo)
   - [Requisitos de Software](#requisitos-de-software)
   - [Variáveis de Ambiente](#variáveis-de-ambiente)
+  - [Configuração de API Keys](#configuração-de-api-keys)
   - [Quick Start](#quick-start)
     - [1. Configuração inicial](#1-configuração-inicial)
+    - [1.1 Validação do ambiente](#11-validação-do-ambiente)
     - [2. Pull do prompt v1 (Fase 1)](#2-pull-do-prompt-v1-fase-1)
     - [3. Editar o prompt v2 (Fase 2)](#3-editar-o-prompt-v2-fase-2)
     - [4. Push do prompt v2 (Fase 3)](#4-push-do-prompt-v2-fase-3)
     - [5. Avaliação das métricas (Fase 4 e 5)](#5-avaliação-das-métricas-fase-4-e-5)
     - [6. Testes de validação](#6-testes-de-validação)
+  - [Troubleshooting](#troubleshooting)
+    - [Erro 429 — Quota Gemini esgotada](#erro-429--quota-gemini-esgotada)
+    - [Erro 429 — Quota OpenAI esgotada (`insufficient_quota`)](#erro-429--quota-openai-esgotada-insufficient_quota)
+    - [Erro — Prompt não encontrado no Hub](#erro--prompt-não-encontrado-no-hub)
+    - [Erro — Variáveis de ambiente faltando](#erro--variáveis-de-ambiente-faltando)
+    - [Erro — `ModuleNotFoundError` ao executar scripts](#erro--modulenotfounderror-ao-executar-scripts)
+    - [Métricas abaixo de 0.8 após avaliação](#métricas-abaixo-de-08-após-avaliação)
+    - [FutureWarning do pacote google-generativeai](#futurewarning-do-pacote-google-generativeai)
   - [Features](#features)
   - [Arquitetura](#arquitetura)
     - [Fluxograma](#fluxograma)
@@ -51,9 +61,14 @@ O objetivo é implementar um pipeline completo de otimização de prompts que:
 
 ## Requisitos de Software
 
-- Python 3.9+
-- Conta no [LangSmith](https://smith.langchain.com) com API Key
-- API Key de OpenAI **ou** Google AI Studio (Gemini)
+| Software | Versão mínima | Descrição | Link |
+|---|---|---|---|
+| Python | 3.9+ | Linguagem de programação principal | [python.org](https://www.python.org/downloads/) |
+| pip | 21.0+ | Gerenciador de pacotes Python (incluso no Python 3.9+) | — |
+| Git | 2.30+ | Controle de versão | [git-scm.com](https://git-scm.com/) |
+| Conta LangSmith | — | Plataforma de avaliação e gestão de prompts (gratuita) | [smith.langchain.com](https://smith.langchain.com) |
+| LangSmith API Key | — | Necessária para pull/push de prompts e avaliação | [Gerar aqui](https://smith.langchain.com/settings) |
+| OpenAI API Key **ou** Google AI Studio API Key | — | Pelo menos um provider de LLM com créditos disponíveis | [OpenAI](https://platform.openai.com/api-keys) / [Google AI Studio](https://aistudio.google.com/app/apikey) |
 
 ## Variáveis de Ambiente
 
@@ -68,6 +83,36 @@ O objetivo é implementar um pipeline completo de otimização de prompts que:
 | `EVAL_MODEL` | Sim | Modelo para avaliação (LLM-as-Judge) | `gemini-2.5-flash` ou `gpt-4o` |
 | `GOOGLE_API_KEY` | Se Gemini | Chave do Google AI Studio | `AIza...` |
 | `OPENAI_API_KEY` | Se OpenAI | Chave da OpenAI | `sk-proj-...` |
+
+## Configuração de API Keys
+
+Configure as credenciais nos arquivos `openai.yaml` e `gemini.yaml`, ou nas variáveis de ambiente `OPENAI_API_KEY` / `GOOGLE_API_KEY`.
+
+**Opção 1**: Arquivos de configuração `openai.yaml` e `gemini.yaml`
+
+Exemplo do arquivo `openai.yaml`
+
+```yaml
+site: "https://platform.openai.com/settings/organization/api-keys"
+id: "key_..."
+secret: "sk-proj-..."
+```
+
+Exemplo do arquivo `gemini.yaml`:
+
+```yaml
+site: "https://aistudio.google.com/api-keys"
+nome: "Gemini API"
+projeto: "1234567890"
+secret: "AQ.Ab8R..."
+```
+
+**Opção 2**: Variáveis de Ambiente
+
+```bash
+export OPENAI_API_KEY=sk-proj-...
+export GOOGLE_API_KEY=AQ.Ab8R...
+```
 
 ## Quick Start
 
@@ -90,6 +135,44 @@ pip install -r requirements.txt
 # Configurar credenciais
 cp .env.example .env
 # Edite .env e preencha LANGSMITH_API_KEY e USERNAME_LANGSMITH_HUB
+```
+
+### 1.1 Validação do ambiente
+
+Após instalar as dependências e preencher o `.env`, execute a validação completa para confirmar que tudo está configurado corretamente:
+
+```bash
+# Validação completa (inclui teste de conectividade com LangSmith)
+python src/validate.py
+
+# Validação rápida sem chamadas de rede
+python src/validate.py --no-api
+```
+
+O script verifica 7 categorias em sequência e exibe um resumo final:
+
+| # | Verificação | O que checa |
+|---|---|---|
+| 1 | Versão do Python | >= 3.9 |
+| 2 | Pacotes instalados | Todos os itens do `requirements.txt` |
+| 3 | Variáveis de ambiente | `.env` existe, campos obrigatórios preenchidos, provider correto |
+| 4 | Arquivos do projeto | Prompts, dataset, scripts `src/` e testes existem |
+| 5 | Estrutura do prompt v2 | Campos obrigatórios, `{bug_report}`, técnicas, exemplos few-shot |
+| 6 | Dataset JSONL | 15 exemplos com `inputs.bug_report` e `outputs.reference` |
+| 7 | Conectividade LangSmith | Conexão com a API e presença do prompt no Hub |
+
+**Saída esperada quando tudo está OK:**
+```
+✅ STATUS: AMBIENTE OK — todos os requisitos estão satisfeitos.
+```
+
+**Saída quando há problemas:**
+```
+❌ Erros encontrados (2):
+   • LANGSMITH_API_KEY não configurada no .env
+   • Prompt 'usuario/bug_to_user_story_v2' não encontrado no Hub
+
+🔴 STATUS: AMBIENTE COM PROBLEMAS — corrija os erros acima antes de prosseguir.
 ```
 
 ### 2. Pull do prompt v1 (Fase 1)
@@ -124,6 +207,150 @@ python src/evaluate.py
 pytest tests/test_prompts.py -v
 # Resultado: 6 testes devem passar (PASSED)
 ```
+
+## Troubleshooting
+
+### Erro 429 — Quota Gemini esgotada
+
+**Sintoma:**
+```
+ResourceExhausted: 429 You exceeded your current quota
+quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
+```
+
+**Causa:** A chave do Google AI Studio está no free tier (limite de ~20 req/dia e 5 req/min). A avaliação exige ~60 chamadas por execução.
+
+**Soluções:**
+1. Aguarde o reset diário da quota (renova à meia-noite UTC) e reexecute `python src/evaluate.py`
+2. Habilite billing no Google Cloud e gere uma nova `GOOGLE_API_KEY` com limites maiores
+3. Alterne para OpenAI no `.env`:
+   ```
+   LLM_PROVIDER=openai
+   LLM_MODEL=gpt-4o-mini
+   EVAL_MODEL=gpt-4o
+   ```
+
+---
+
+### Erro 429 — Quota OpenAI esgotada (`insufficient_quota`)
+
+**Sintoma:**
+```
+openai.RateLimitError: Error code: 429 - insufficient_quota
+```
+
+**Causa:** A conta OpenAI não possui créditos ou o limite de uso foi atingido.
+
+**Soluções:**
+1. Acesse [platform.openai.com/settings/billing](https://platform.openai.com/settings/billing) e adicione créditos
+2. Alterne para Gemini no `.env`:
+   ```
+   LLM_PROVIDER=google
+   LLM_MODEL=gemini-2.5-flash
+   EVAL_MODEL=gemini-2.5-flash
+   ```
+
+---
+
+### Erro — Prompt não encontrado no Hub
+
+**Sintoma:**
+```
+❌ ERRO: Não foi possível carregar o prompt '{username}/bug_to_user_story_v2'
+⚠️  O prompt não foi encontrado no LangSmith Hub.
+```
+
+**Causa:** O push ainda não foi executado ou o `USERNAME_LANGSMITH_HUB` está incorreto.
+
+**Solução:**
+```bash
+# Verificar username configurado
+grep USERNAME_LANGSMITH_HUB .env
+
+# Fazer push do prompt
+python src/push_prompts.py
+
+# Então avaliar
+python src/evaluate.py
+```
+
+---
+
+### Erro — Variáveis de ambiente faltando
+
+**Sintoma:**
+```
+❌ Variáveis de ambiente faltando:
+   - LANGSMITH_API_KEY
+```
+
+**Causa:** O arquivo `.env` não foi criado ou a variável está vazia.
+
+**Solução:**
+```bash
+cp .env.example .env
+# Edite .env e preencha os valores obrigatórios
+```
+
+---
+
+### Erro — `ModuleNotFoundError` ao executar scripts
+
+**Sintoma:**
+```
+ModuleNotFoundError: No module named 'langchain'
+```
+
+**Causa:** O ambiente virtual não está ativo ou as dependências não foram instaladas.
+
+**Solução:**
+```bash
+python3 -m venv venv
+source venv/bin/activate   # Linux/Mac
+# venv\Scripts\activate    # Windows
+pip install -r requirements.txt
+```
+
+---
+
+### Métricas abaixo de 0.8 após avaliação
+
+**Diagnóstico por métrica:**
+
+| Métrica baixa | Causa provável | Ação |
+|---|---|---|
+| **F1-Score** | Termos-chave ausentes na resposta vs referência | Incluir "Critérios de Aceitação:", "Dado que", "Quando", "Então" no prompt |
+| **Clarity** | Resposta sem estrutura clara | Reforçar uso de headers Markdown e seções obrigatórias |
+| **Precision** | Informações inventadas ou fuga do tópico | Instruir o modelo a não inventar detalhes não mencionados no bug |
+| **Helpfulness** | Resposta pouco útil ao desenvolvedor | Reforçar a persona de PM e o objetivo de gerar user stories acionáveis |
+| **Correctness** | Conteúdo incorreto ou impreciso | Adicionar mais exemplos few-shot com respostas de referência |
+
+**Ciclo de melhoria:**
+```bash
+# 1. Edite o prompt
+vim prompts/bug_to_user_story_v2.yml
+
+# 2. Publique a nova versão
+python src/push_prompts.py
+
+# 3. Reavalie
+python src/evaluate.py
+```
+
+---
+
+### FutureWarning do pacote google-generativeai
+
+**Sintoma:**
+```
+FutureWarning: All support for the `google.generativeai` package has ended.
+```
+
+**Causa:** Versão do `langchain-google-genai` instalada ainda usa a biblioteca legada internamente.
+
+**Impacto:** Apenas um aviso informativo — o código continua funcionando normalmente. Nenhuma ação necessária para o desafio.
+
+---
 
 ## Features
 
@@ -187,6 +414,7 @@ mba-ia-pull-evaluation-prompt/
 │   └── bug_to_user_story.jsonl   # 15 exemplos de bugs para avaliação
 │
 ├── src/
+│   ├── validate.py           # Validação completa do ambiente e configuração
 │   ├── pull_prompts.py       # Pull do LangSmith Hub (implementado)
 │   ├── push_prompts.py       # Push ao LangSmith Hub (implementado)
 │   ├── evaluate.py           # Avaliação automática (pronto — não alterar)
@@ -199,13 +427,25 @@ mba-ia-pull-evaluation-prompt/
 
 ## Tecnologias utilizadas
 
-| Componente | Tech | Versão |
+| Componente | Tecnologia | Versão |
 |---|---|---|
-| Python | Program language | 3.9+ |
-| Framework | LangChain | — |
-| Plataforma de avaliação | LangSmith | — |
+| Linguagem de programação | Python | 3.9+ |
+| Framework principal | LangChain | 0.3.13 |
+| Framework core | LangChain Core | 0.3.28 |
+| Comunidade LangChain | LangChain Community | 0.3.13 |
+| Plataforma de avaliação e tracing | LangSmith | 0.2.7 |
 | Gestão de prompts | LangSmith Prompt Hub | — |
+| Provider LLM (geração) | LangChain OpenAI | 0.2.14 |
+| Provider LLM (geração alternativa) | LangChain Google GenAI | 2.0.8 |
+| Modelo de geração (OpenAI) | GPT-4o Mini | — |
+| Modelo de avaliação (OpenAI) | GPT-4o | — |
+| Modelo de geração (Gemini) | Gemini 2.5 Flash | — |
+| Modelo de avaliação (Gemini) | Gemini 2.5 Flash | — |
 | Formato de prompts | YAML | — |
+| Carregamento de variáveis | python-dotenv | 1.0.1 |
+| Validação de dados | Pydantic | 2.10.4 |
+| Parser YAML | PyYAML | 6.0.2 |
+| Framework de testes | pytest | 8.3.4 |
 
 ## Técnicas Aplicadas (Fase 2)
 
