@@ -58,6 +58,12 @@ def push_prompt_to_langsmith(prompt_name: str, prompt_data: dict) -> bool:
         return True
 
     except Exception as e:
+        error_str = str(e)
+        if "409" in error_str and "Nothing to commit" in error_str:
+            print(f"   ✓ Prompt já está atualizado no Hub (sem alterações desde o último push)")
+            print(f"   ✓ Visibilidade: PÚBLICO")
+            print(f"   ✓ URL: https://smith.langchain.com/hub/{prompt_name}")
+            return True
         print(f"   ❌ Erro ao fazer push do prompt '{prompt_name}': {e}")
         print("\n   Verifique:")
         print("   - LANGSMITH_API_KEY está configurada corretamente no .env")
