@@ -8,7 +8,7 @@
   - [Requisitos de Software](#requisitos-de-software)
   - [Variáveis de Ambiente](#variáveis-de-ambiente)
   - [Configuração de API Keys](#configuração-de-api-keys)
-  - [Quick Start](#quick-start)
+  - [Como executar?](#como-executar)
     - [1. Configuração inicial](#1-configuração-inicial)
     - [1.1 Validação do ambiente](#11-validação-do-ambiente)
     - [2. Pull do prompt v1 (Fase 1)](#2-pull-do-prompt-v1-fase-1)
@@ -34,11 +34,14 @@
     - [2. Few-shot Learning](#2-few-shot-learning)
     - [3. Chain of Thought (CoT)](#3-chain-of-thought-cot)
   - [Resultados Finais](#resultados-finais)
-    - [Tabela Comparativa: v1 vs v2](#tabela-comparativa-v1-vs-v2)
+    - [Evidências no LangSmith](#evidências-no-langsmith)
+    - [Dataset de Avaliação](#dataset-de-avaliação)
     - [Problemas do v1 corrigidos no v2](#problemas-do-v1-corrigidos-no-v2)
-  - [Métricas de Avaliação](#métricas-de-avaliação)
-  - [Dataset de Avaliação](#dataset-de-avaliação)
-  - [Evidências no LangSmith](#evidências-no-langsmith)
+    - [Métricas de Avaliação](#métricas-de-avaliação)
+    - [Screenshots](#screenshots)
+    - [Resultados de uma execução dos scripts](#resultados-de-uma-execução-dos-scripts)
+    - [Tabela Comparativa: v1 vs v2](#tabela-comparativa-v1-vs-v2)
+    - [Scores por exemplo](#scores-por-exemplo)
   - [Links Úteis](#links-úteis)
   - [Developer](#developer)
   - [License](#license)
@@ -114,7 +117,7 @@ export OPENAI_API_KEY=sk-proj-...
 export GOOGLE_API_KEY=AQ.Ab8R...
 ```
 
-## Quick Start
+## Como executar?
 
 ### 1. Configuração inicial
 
@@ -496,6 +499,180 @@ Antes de escrever a User Story, analise mentalmente os seguintes pontos em ordem
 
 ## Resultados Finais
 
+### Evidências no LangSmith
+
+Link público do dashboard: https://smith.langchain.com/hub/aeciopires/bug_to_user_story_v2
+
+### Dataset de Avaliação
+
+O arquivo `datasets/bug_to_user_story.jsonl` contém 15 exemplos:
+
+| Tipo | Quantidade | Domínios |
+|---|---|---|
+| Simples | 5 | e-commerce, SaaS, mobile |
+| Médio | 7 | integração, segurança, performance, UX, CRM |
+| Complexo/Crítico | 3 | múltiplos problemas críticos com impacto financeiro |
+
+### Problemas do v1 corrigidos no v2
+
+| Problema (v1) | Solução (v2) |
+|---|---|
+| `{bug_report}` duplicado no system e user prompt | Variável apenas no `user_prompt` |
+| Sem persona definida | Role Prompting: PM Sênior |
+| Sem instruções de formato | Regras explícitas por nível de complexidade |
+| Sem exemplos de entrada/saída | 3 exemplos (simples, médio, complexo) |
+| Sem tratamento de edge cases | Seção "Tratamento de Edge Cases" |
+| Instruções vagas e genéricas | Chain of Thought + Classificação de Complexidade |
+
+### Métricas de Avaliação
+
+As métricas são calculadas por `src/metrics.py` usando **LLM-as-Judge**:
+
+| Métrica | Tipo | Descrição |
+|---|---|---|
+| **F1-Score** | Base | Balanceamento entre Precision e Recall (overlap com referência) |
+| **Clarity** | Base | Clareza, organização, linguagem e concisão da resposta |
+| **Precision** | Base | Ausência de alucinações, foco na pergunta, correção factual |
+| **Helpfulness** | Derivada | Média de Clarity + Precision |
+| **Correctness** | Derivada | Média de F1-Score + Precision |
+
+Critério de aprovação: **TODAS as 5 métricas >= 0.8** (não apenas a média).
+
+### Screenshots
+
+
+
+### Resultados de uma execução dos scripts
+
+Push dos prompts:
+
+```bash
+python src/push_prompts.py 
+
+==================================================
+PUSH DE PROMPTS PARA O LANGSMITH HUB
+==================================================
+
+Carregando prompt de: prompts/bug_to_user_story_v2.yml
+Validando estrutura do prompt...
+   ✓ Estrutura válida
+   ✓ Técnicas aplicadas: few-shot-learning, role-prompting, chain-of-thought
+
+Fazendo push do prompt: aeciopires/bug_to_user_story_v2
+   ✓ Prompt já está atualizado no Hub (sem alterações desde o último push)
+   ✓ Visibilidade: PÚBLICO
+   ✓ URL: https://smith.langchain.com/hub/aeciopires/bug_to_user_story_v2
+
+==================================================
+PUSH CONCLUÍDO COM SUCESSO
+==================================================
+
+Próximos passos:
+1. Acesse o LangSmith Hub para confirmar a publicação
+2. Execute a avaliação: python src/evaluate.py
+3. Se métricas < 0.8: edite o YAML, repita push e avaliação
+```
+
+Avaliação dos prompts:
+
+```bash
+python src/evaluate.py 
+
+==================================================
+AVALIAÇÃO DE PROMPTS OTIMIZADOS
+==================================================
+
+Provider: google
+Modelo Principal: gemini-2.5-flash-lite
+Modelo de Avaliação: gemini-2.5-flash-lite
+
+Criando dataset de avaliação: prompt-optimization-challenge-resolved-eval...
+   ✓ Carregados 15 exemplos do arquivo datasets/bug_to_user_story.jsonl
+   ✓ Dataset 'prompt-optimization-challenge-resolved-eval' já existe, usando existente
+
+======================================================================
+PROMPTS PARA AVALIAR
+======================================================================
+
+Este script irá puxar prompts do LangSmith Hub.
+Certifique-se de ter feito push dos prompts antes de avaliar:
+  python src/push_prompts.py
+
+
+🔍 Avaliando: aeciopires/bug_to_user_story_v2
+   Puxando prompt do LangSmith Hub: aeciopires/bug_to_user_story_v2
+   ✓ Prompt carregado com sucesso
+   Dataset: 15 exemplos
+   Avaliando exemplos...
+      [1/15] F1:0.87 Clarity:0.90 Precision:0.90
+      [2/15] F1:0.92 Clarity:0.90 Precision:0.95
+      [3/15] F1:0.97 Clarity:0.90 Precision:0.95
+      [4/15] F1:0.89 Clarity:0.85 Precision:0.70
+      [5/15] F1:0.85 Clarity:0.90 Precision:0.90
+      [6/15] F1:0.90 Clarity:0.85 Precision:0.90
+      [7/15] F1:1.00 Clarity:0.90 Precision:0.90
+      [8/15] F1:1.00 Clarity:0.90 Precision:0.90
+      [9/15] F1:1.00 Clarity:0.90 Precision:0.90
+      [10/15] F1:1.00 Clarity:0.90 Precision:1.00
+      [11/15] F1:1.00 Clarity:0.85 Precision:0.80
+      [12/15] F1:0.69 Clarity:0.70 Precision:0.33
+      [13/15] F1:1.00 Clarity:0.90 Precision:0.90
+      [14/15] F1:1.00 Clarity:0.90 Precision:0.90
+      [15/15] F1:1.00 Clarity:0.70 Precision:0.33
+
+==================================================
+Prompt: aeciopires/bug_to_user_story_v2
+==================================================
+
+Métricas Derivadas:
+  - Helpfulness: 0.84 ✓
+  - Correctness: 0.88 ✓
+
+Métricas Base:
+  - F1-Score: 0.94 ✓
+  - Clarity: 0.86 ✓
+  - Precision: 0.82 ✓
+
+--------------------------------------------------
+📊 MÉDIA GERAL: 0.8678
+--------------------------------------------------
+
+✅ STATUS: APROVADO - Todas as métricas >= 0.8
+
+==================================================
+RESUMO FINAL
+==================================================
+
+Prompts avaliados: 1
+Aprovados: 1
+Reprovados: 0
+
+✅ Todos os prompts atingiram todas as métricas >= 0.8!
+
+✓ Confira os resultados em:
+  https://smith.langchain.com/o/dda3b4b9-812c-4344-837c-8f72d2e9661d/projects/p/57556733-d7be-4070-930b-b1890ecbeeb0
+
+Próximos passos:
+1. Documente o processo no README.md
+2. Capture screenshots das avaliações
+3. Faça commit e push para o GitHub
+```
+
+Script de testes:
+
+```bash
+$ pytest tests/test_prompts.py 
+============================= test session starts =============================================
+platform linux -- Python 3.10.12, pytest-8.3.4, pluggy-1.6.0
+rootdir: /home/aecio/git/mygithub/mba-ia/mba-ia-pull-evaluation-prompt
+plugins: anyio-4.8.0
+collected 6 items
+
+tests/test_prompts.py ...... [100%]
+
+============================ 6 passed in 0.04s ================================================
+```
+
 ### Tabela Comparativa: v1 vs v2
 
 | Métrica | v1 (Ruim) | v2 (Otimizado) | Mínimo |
@@ -529,50 +706,6 @@ Antes de escrever a User Story, analise mentalmente os seguintes pontos em ordem
 | 13 | complexo | 1.00 | 0.90 | 0.90 |
 | 14 | complexo | 1.00 | 0.90 | 0.90 |
 | 15 | complexo | 1.00 | 0.70 | 0.33 |
-
-### Problemas do v1 corrigidos no v2
-
-| Problema (v1) | Solução (v2) |
-|---|---|
-| `{bug_report}` duplicado no system e user prompt | Variável apenas no `user_prompt` |
-| Sem persona definida | Role Prompting: PM Sênior |
-| Sem instruções de formato | Regras explícitas por nível de complexidade |
-| Sem exemplos de entrada/saída | 3 exemplos (simples, médio, complexo) |
-| Sem tratamento de edge cases | Seção "Tratamento de Edge Cases" |
-| Instruções vagas e genéricas | Chain of Thought + Classificação de Complexidade |
-
-## Métricas de Avaliação
-
-As métricas são calculadas por `src/metrics.py` usando **LLM-as-Judge**:
-
-| Métrica | Tipo | Descrição |
-|---|---|---|
-| **F1-Score** | Base | Balanceamento entre Precision e Recall (overlap com referência) |
-| **Clarity** | Base | Clareza, organização, linguagem e concisão da resposta |
-| **Precision** | Base | Ausência de alucinações, foco na pergunta, correção factual |
-| **Helpfulness** | Derivada | Média de Clarity + Precision |
-| **Correctness** | Derivada | Média de F1-Score + Precision |
-
-Critério de aprovação: **TODAS as 5 métricas >= 0.8** (não apenas a média).
-
-## Dataset de Avaliação
-
-O arquivo `datasets/bug_to_user_story.jsonl` contém 15 exemplos:
-
-| Tipo | Quantidade | Domínios |
-|---|---|---|
-| Simples | 5 | e-commerce, SaaS, mobile |
-| Médio | 7 | integração, segurança, performance, UX, CRM |
-| Complexo/Crítico | 3 | múltiplos problemas críticos com impacto financeiro |
-
-## Evidências no LangSmith
-
-Após a execução bem-sucedida, as seguintes evidências devem estar visíveis no dashboard do LangSmith:
-
-- **Dataset**: `prompt-optimization-challenge-resolved-eval` com 15 exemplos
-- **Prompt**: `{username}/bug_to_user_story_v2` publicado como público
-- **Execuções**: runs do prompt v2 com scores >= 0.8 em todas as métricas
-- **Tracing**: rastreamento detalhado de cada execução (prompt → LLM → métricas)
 
 ## Links Úteis
 
