@@ -500,12 +500,35 @@ Antes de escrever a User Story, analise mentalmente os seguintes pontos em ordem
 
 | Métrica | v1 (Ruim) | v2 (Otimizado) | Mínimo |
 |---|---|---|---|
-| Helpfulness | ~0.45 | >= 0.80 | 0.80 |
-| Correctness | ~0.52 | >= 0.80 | 0.80 |
-| F1-Score | ~0.48 | >= 0.80 | 0.80 |
-| Clarity | ~0.50 | >= 0.80 | 0.80 |
-| Precision | ~0.46 | >= 0.80 | 0.80 |
-| **STATUS** | **REPROVADO** | **APROVADO** | — |
+| Helpfulness | ~0.45 | **0.84** ✓ | 0.80 |
+| Correctness | ~0.52 | **0.88** ✓ | 0.80 |
+| F1-Score | ~0.48 | **0.94** ✓ | 0.80 |
+| Clarity | ~0.50 | **0.86** ✓ | 0.80 |
+| Precision | ~0.46 | **0.82** ✓ | 0.80 |
+| **Média Geral** | ~0.47 | **0.8678** | 0.80 |
+| **STATUS** | **REPROVADO** | **✅ APROVADO** | — |
+
+> Avaliação executada em 2026-06-17 com **gemini-2.5-flash-lite** como modelo de geração e avaliação (LLM-as-Judge), sobre os 15 exemplos do dataset `datasets/bug_to_user_story.jsonl`.
+
+### Scores por exemplo
+
+| Exemplo | Complexidade | F1 | Clarity | Precision |
+|---|---|---|---|---|
+| 1 | simples | 0.87 | 0.90 | 0.90 |
+| 2 | simples | 0.92 | 0.90 | 0.95 |
+| 3 | simples | 0.97 | 0.90 | 0.95 |
+| 4 | simples | 0.89 | 0.85 | 0.70 |
+| 5 | simples | 0.85 | 0.90 | 0.90 |
+| 6 | médio | 0.90 | 0.85 | 0.90 |
+| 7 | médio | 1.00 | 0.90 | 0.90 |
+| 8 | médio | 1.00 | 0.90 | 0.90 |
+| 9 | médio | 1.00 | 0.90 | 0.90 |
+| 10 | médio | 1.00 | 0.90 | 1.00 |
+| 11 | médio | 1.00 | 0.85 | 0.80 |
+| 12 | médio | 0.69 | 0.70 | 0.33 |
+| 13 | complexo | 1.00 | 0.90 | 0.90 |
+| 14 | complexo | 1.00 | 0.90 | 0.90 |
+| 15 | complexo | 1.00 | 0.70 | 0.33 |
 
 ### Problemas do v1 corrigidos no v2
 
