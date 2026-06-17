@@ -540,7 +540,109 @@ Critério de aprovação: **TODAS as 5 métricas >= 0.8** (não apenas a média)
 
 ### Screenshots
 
+#### Dataset de Avaliação no LangSmith
 
+![Dataset com 15 exemplos no LangSmith](images/dataset.png)
+
+*Dataset `prompt-optimization-challenge-resolved-eval` criado no LangSmith com os 15 exemplos de avaliação (5 simples, 7 médios, 3 complexos).*
+
+---
+
+#### Prompt v2 Publicado no LangSmith Hub
+
+![Prompt v2 publicado no LangSmith Hub como público](images/langsmithhub.png)
+
+*Prompt `aeciopires/bug_to_user_story_v2` publicado no LangSmith Hub com visibilidade pública. Exibe o `system_prompt` com as seções de Persona, Objetivo e Processo, além das tags: `prompting`, `product-management`, `few-shot`, `chain-of-thought`.*
+
+---
+
+#### Monitoramento — Traces e Latência
+
+![Monitoramento: Trace Count, Trace Latency e Trace Error Rate](images/monitoring_1.png)
+
+*Painel de monitoramento do projeto `prompt-optimization-challenge-resolved`: contagem de traces, latência por trace e taxa de erros ao longo do tempo.*
+
+---
+
+#### Monitoramento — Custo e Chamadas LLM
+
+![Monitoramento: LLM Count, LLM Latency, Total Cost e Cost per Trace](images/monitoring_2.png)
+
+*Métricas de uso de LLM: número de chamadas, latência, custo total (~$0,05 no pico) e custo por trace durante a execução da avaliação.*
+
+---
+
+#### Monitoramento — Tokens Consumidos
+
+![Monitoramento: Output Tokens, Input Tokens e tokens por trace](images/monitoring_3.png)
+
+*Consumo de tokens por execução: tokens de saída (~40K no pico) e tokens de entrada (~250K+ no pico), com percentis por trace.*
+
+---
+
+#### Monitoramento — Tipos de Run por Modelo
+
+![Monitoramento: Run Count by Name, Latency e Error Rate por modelo](images/monitoring_4.png)
+
+*Distribuição de runs por tipo: `ChatGoogleGenerativeAI`, `ChatOpenAI` e `ChatPromptTemplate` — com mediana de latência e taxa de erros por modelo.*
+
+---
+
+#### Tracing — Lista Completa de Traces
+
+![Lista de traces do projeto no LangSmith](images/tracing.png)
+
+*Visão geral dos traces gerados durante a avaliação: runs de `ChallengeGenerateAnswer` e `RunnableSequence` com status de sucesso (verde) e erros, inputs/outputs e latências.*
+
+---
+
+#### Tracing — Exemplo 1: Análise do Bug Report (CoT)
+
+![Trace do Exemplo 1 — Análise Chain-of-Thought do bug report](images/tracing_example1_screen1.png)
+
+*Trace expandido do `ChatGoogleGenerativeAI` mostrando a entrada (bug report sobre notificações por e-mail) e a saída com a análise passo a passo via Chain of Thought: Usuário Afetado, Comportamento Esperado, Comportamento Atual, Impacto do Negócio, Critérios de Aceitação e Complexidade.*
+
+---
+
+#### Tracing — Exemplo 1: User Story Gerada
+
+![Trace do Exemplo 1 — User Story gerada pelo prompt v2](images/tracing_example1_screen2.png)
+
+*Saída completa da User Story gerada para o bug de notificações por e-mail, incluindo título, descrição, critérios de aceitação, estimativa e resposta esperada do Ground Truth para comparação.*
+
+---
+
+#### Tracing — Exemplo 1: Prompt do LLM-as-Judge
+
+![Trace do Exemplo 1 — Prompt do avaliador LLM-as-Judge](images/tracing_example1_screen3.png)
+
+*Prompt enviado ao LLM-as-Judge para calcular as métricas de Clarity e Precision, com rubrica detalhada dos critérios de avaliação e instrução de retorno em JSON.*
+
+---
+
+#### Tracing — Exemplo 1: Metadados do Trace
+
+![Trace do Exemplo 1 — Metadados e atributos LangSmith](images/tracing_example1_screen4.png)
+
+*Painel de atributos do trace: metadados LangSmith (`LANGCHAIN_PROJECT`, `ai_model_name`), parâmetros do modelo Google (`gemini-2.5-flash-lite`) e configurações de invocação.*
+
+---
+
+#### Tracing — Exemplo 2: Saída do Avaliador (LLM-as-Judge)
+
+![Trace do Exemplo 2 — Saída do LLM-as-Judge com metadados](images/tracing_example2_screen3.png)
+
+*Saída do LLM-as-Judge para o segundo exemplo de avaliação, com resposta em português e atributos LangSmith mostrando o modelo `gemini-2.5-flash-lite` e o projeto associado.*
+
+---
+
+#### Tracing — Exemplo 3: Saída do Avaliador (LLM-as-Judge)
+
+![Trace do Exemplo 3 — Saída do LLM-as-Judge com metadados](images/tracing_example3_screen3.png)
+
+*Saída do LLM-as-Judge para o terceiro exemplo de avaliação, confirmando a pontuação do avaliador com justificativa detalhada e metadados do trace.*
+
+---
 
 ### Resultados de uma execução dos scripts
 
