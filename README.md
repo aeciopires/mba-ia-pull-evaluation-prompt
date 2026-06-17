@@ -38,7 +38,24 @@
     - [Dataset de Avaliação](#dataset-de-avaliação)
     - [Problemas do v1 corrigidos no v2](#problemas-do-v1-corrigidos-no-v2)
     - [Métricas de Avaliação](#métricas-de-avaliação)
+    - [Jornada de Otimização e Ciclo de Iteração](#jornada-de-otimização-e-ciclo-de-iteração)
+      - [O ponto de partida: entendendo o v1](#o-ponto-de-partida-entendendo-o-v1)
+      - [O ciclo de iteração](#o-ciclo-de-iteração)
+      - [O resultado final após as iterações](#o-resultado-final-após-as-iterações)
     - [Screenshots](#screenshots)
+      - [Dataset de Avaliação no LangSmith](#dataset-de-avaliação-no-langsmith)
+      - [Prompt v2 Publicado no LangSmith Hub](#prompt-v2-publicado-no-langsmith-hub)
+      - [Monitoramento — Traces e Latência](#monitoramento--traces-e-latência)
+      - [Monitoramento — Custo e Chamadas LLM](#monitoramento--custo-e-chamadas-llm)
+      - [Monitoramento — Tokens Consumidos](#monitoramento--tokens-consumidos)
+      - [Monitoramento — Tipos de Run por Modelo](#monitoramento--tipos-de-run-por-modelo)
+      - [Tracing — Lista Completa de Traces](#tracing--lista-completa-de-traces)
+      - [Tracing — Exemplo 1: Análise do Bug Report (CoT)](#tracing--exemplo-1-análise-do-bug-report-cot)
+      - [Tracing — Exemplo 1: User Story Gerada](#tracing--exemplo-1-user-story-gerada)
+      - [Tracing — Exemplo 1: Prompt do LLM-as-Judge](#tracing--exemplo-1-prompt-do-llm-as-judge)
+      - [Tracing — Exemplo 1: Metadados do Trace](#tracing--exemplo-1-metadados-do-trace)
+      - [Tracing — Exemplo 2: Saída do Avaliador (LLM-as-Judge)](#tracing--exemplo-2-saída-do-avaliador-llm-as-judge)
+      - [Tracing — Exemplo 3: Saída do Avaliador (LLM-as-Judge)](#tracing--exemplo-3-saída-do-avaliador-llm-as-judge)
     - [Resultados de uma execução dos scripts](#resultados-de-uma-execução-dos-scripts)
     - [Tabela Comparativa: v1 vs v2](#tabela-comparativa-v1-vs-v2)
     - [Scores por exemplo](#scores-por-exemplo)
@@ -537,6 +554,64 @@ As métricas são calculadas por `src/metrics.py` usando **LLM-as-Judge**:
 | **Correctness** | Derivada | Média de F1-Score + Precision |
 
 Critério de aprovação: **TODAS as 5 métricas >= 0.8** (não apenas a média).
+
+### Jornada de Otimização e Ciclo de Iteração
+
+#### O ponto de partida: entendendo o v1
+
+O processo começou com o pull do prompt original (`leonanluppi/bug_to_user_story_v1`) do LangSmith Hub. Ao analisá-lo, ficaram evidentes os problemas estruturais:
+
+- A variável `{bug_report}` apareceu duplicada no `system_prompt` e no `user_prompt`;
+- Não tinha uma persona definida para o LLM;
+- As instruções eram vagas;
+- E não existiam exemplos de entrada e saída para guiar o modelo.
+
+O resultado inicial foi: ao rodar a avaliação com o v1, todas as métricas ficaram bem abaixo do mínimo de 0.8, com média geral em torno de 0.47.
+
+#### O ciclo de iteração
+
+Consistiu em editar, publicar, avaliar e corrigir. A otimização de prompts não foi um processo linear. Foi um ciclo de melhoria contínua, onde cada rodada de avaliação revelou onde o modelo ainda errou e o que precisou ser ajustado.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   1. Editar           2. Publicar        3. Avaliar     │
+│   ─────────           ──────────         ────────────   │
+│   Ajusta o   ──────►  push_prompts  ──►  evaluate.py    │
+│   YAML local          .py               (15 exemplos)   │
+│                                               │         │
+│              ◄────────────────────────────────┘         │
+│           4. Analisar métricas e identificar falhas     │
+│                                                         │
+│   Repete até TODAS as métricas >= 0.8                   │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+> **Importante:** o `evaluate.py` sempre puxa o prompt diretamente do LangSmith Hub. Editar o YAML local sem fazer push não tem efeito algum na avaliação. O Hub é a fonte única de verdade.
+
+Foram realizadas 4 interações:
+
+- **Iteração 1**: Corrigir os problemas estruturais básicos citados na seção anterior. Ao fazer isso, o score das métricas de F1 e Clarity subiram ligeiramente, mas a Precision ainda falhou, pois o modelo alucinou com detalhes não ausentes no bug report.
+- **Iteração 2**: Adicionar Role Prompting. Nela foi adicionada ao LLM uma identidade clara: *"Você é um Product Manager Sênior com mais de 10 anos de experiência..."*. Isso ancorou o modelo em um papel específico com expectativas claras de qualidade. Sem isso o modelo gerava respostas genéricas. Ao fazer isso, o score da métrica Clarity subiu porque as respostas ficaram mais organizadas e com linguagem adequada ao contexto de produto.
+- **Iteração 3**: Adicionar Few-shot Learning. Foram adicionados 15 exemplos classificados em 3 níveis de complexidade: **simples**, **médio** e **complexo**, usando o par `bug report → user story`. Com isso, o modelo passou a "imitar" o padrão de qualidade dos exemplos, em vez de inventar um formato próprio. O score da métrica F1 subiu significativamente porque o overlap com as respostas de referência aumentou. Ou seja, o modelo passou a usar estruturas parecidas com as do Ground Truth.
+- **Iteração 4**: Adicionar Chain of Thought (CoT). Isso forçou o modelo a **raciocinar antes de responder**. Em vez de gerar a user story diretamente, o prompt instruiu o LLM a primeiro realizar uma análise estruturada em 6 etapas: identificar o usuário afetado, o comportamento esperado, o atual, o impacto no negócio, os critérios de aceitação e a complexidade. Esse raciocínio intermediário reduziu drasticamente as alucinações e melhorou a precisão factual. O score da métrica Precision subiu porque o modelo se ancorou nos fatos do bug report antes de gerar qualquer afirmação.
+
+#### O resultado final após as iterações
+
+Após aplicar as quatro técnicas em conjunto, a avaliação com os 15 exemplos produziu:
+
+| Métrica | v1 (Ruim) | v2 (Otimizado) | Mínimo |
+|---|---|---|---|
+| Helpfulness | ~0.45 | **0.84** ✓ | 0.80 |
+| Correctness | ~0.52 | **0.88** ✓ | 0.80 |
+| F1-Score | ~0.48 | **0.94** ✓ | 0.80 |
+| Clarity | ~0.50 | **0.86** ✓ | 0.80 |
+| Precision | ~0.46 | **0.82** ✓ | 0.80 |
+| **Média Geral** | ~0.47 | **0.8678** | 0.80 |
+| **STATUS** | **REPROVADO** | **APROVADO** | — |
+
+O salto de ~0.47 para 0.8678 de média geral, com **todas as 5 métricas acima de 0.8**, demonstra que a combinação de Role Prompting + Few-shot Learning + Chain of Thought atua em dimensões complementares: identidade do modelo, formato esperado e qualidade do raciocínio. Nenhuma técnica isolada seria suficiente — é a combinação delas que produz o resultado.
 
 ### Screenshots
 
